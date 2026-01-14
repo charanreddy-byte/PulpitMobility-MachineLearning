@@ -1,60 +1,91 @@
-# PulpitMobility_Forecasting 
+# PulpitMobility Internship Challenge
+Project Overview
+This repository contains solutions for the PulpitMobility Internship Challenge, demonstrating data science skills across two distinct domains:
+1.Solar Irradiance Forecasting: A time-series regression problem to predict solar energy generation.
+2.Car Showroom Classification: A classification problem to predict customer payment methods.
 
-1. Problem Understanding
+# Project 1: Solar Irradiance Forecasting
 
-Predict the amount of solar energy (ALLSKY_SFC_SW_DWN) reaching the ground at any given hour based on weather parameters. Real-World Context: In the renewable energy sector, "Grid Stability" is the primary challenge. Solar power is intermittent—clouds can cause a sudden drop in generation. Grid operators need accurate short-term forecasts to know exactly when to ramp up backup power (like gas turbines) to prevent blackouts. My model serves as this critical "Forecasting Engine."
+Problem Understanding: 
+The objective was to forecast All-Sky Surface Shortwave Downward Irradiance (ALLSKY_SFC_SW_DWN), which represents the solar energy available for power generation in Watts/$m^2$4.
 
-2. Data Cleaning & Strategic Decisions
-The raw sensor data contained significant noise, requiring bold engineering decisions:
-Handling Missing Targets: The dataset used -999.0 as a placeholder for missing values. I chose to drop these rows entirely (~40% of the dataset) rather than imputing them.
-Reasoning: Imputing the Target Variable (Ground Truth) introduces artificial bias. If I guess the solar irradiance for missing hours, the model learns my guess, not reality. Training on fewer, high-quality rows is better than training on abundant, fake data.
-Feature Selection: I removed the ALLSKY_KT (Clearness Index) column.
-Reasoning: This feature had a massive number of missing values. While "cloud clearness" is theoretically useful, in practice, a feature that is missing 70% of the time adds more noise than signal to the model.
+Real-World Context: 
+Accurate forecasting is critical for energy grid operators to balance supply and demand. By predicting solar intensity, operators can efficiently manage backup power sources (like gas turbines) during cloud cover or peak demand.
 
-3. Feature Engineering: The "Cyclic Time" Insight
-Standard machine learning models treat time linearly. To a model, Hour 23 (11 PM) and Hour 0 (Midnight) appear far apart (distance = 23). In reality, they are adjacent.
-The Solution: I transformed Hour and Month into Sine and Cosine components (hour_sin, hour_cos).
-The Impact: This transformation mapped time onto a 2D circle. This allowed the model to mathematically understand the daily cycle of the sun—specifically, that the conditions at 11:59 PM are nearly identical to 12:01 AM, preserving the temporal continuity of the data.
+Approach and Methodology.
+Data Cleaning:
+Identified that -999.0 was used as a placeholder for missing values. I chose to drop these rows rather than impute them to ensure the model trained only on "ground truth" data, avoiding artificial bias.Removed the ALLSKY_KT column due to excessive missing values (data sparsity).
 
-4. Model Selection: Random Forest Regressor
-I selected a Random Forest Regressor over Linear Regression or LSTM (Deep Learning) for this specific challenge:
-Non-Linear Relationships: Solar irradiance has a complex, non-linear relationship with Temperature and Pressure. A linear model cannot easily capture the "bell curve" shape of daily solar intensity.
-Robustness to Outliers: Sensor data is prone to spikes (e.g., a bird covering a sensor). Random Forests average the results of multiple decision trees, making them naturally resistant to these individual anomalies.
-Efficiency:Random Forest offered the highest accuracy-to-training-time ratio, avoiding the extensive architecture tuning required for Neural Networks.
+Feature Engineering (Cyclic Time):
 
-5. Results & Visual Analysis
-Metric: I used Root Mean Squared Error (RMSE).
-Justification: In energy forecasting, large errors are exponentially worse than small ones (predicting full sun during a storm causes a grid failure). RMSE penalizes these large errors more heavily than MAE.
-Visual Validation: The "Actual vs. Predicted" plot demonstrates that the model successfully captures the diurnal (daily) cycle.
-Success: The model correctly predicts near-zero irradiance at night.
-Success: The peaks align well with the actual sensor readings, proving the model has learned the relationship between Solar Zenith Angle (SZA) and Irradiance.
+Converted linear time features (Hour, Month) into Sine and Cosine components. This transformation maps time onto a 2D circle, allowing the model to understand that Hour 23 (11 PM) is adjacent to Hour 0 (Midnight), preserving temporal continuity.
+
+Model Selection:
+
+Selected Random Forest Regressor to handle the non-linear relationship between weather variables (Temperature, Pressure) and solar irradiance.
+
+Hyperparameter Tuning:
+
+Implemented RandomizedSearchCV with TimeSeriesSplit. This strict validation strategy ensures the model is evaluated on "future" data only, preventing data leakage found in standard k-fold cross-validation.
+
+Tools and Technologies Used 
+
+Language: Python 3.13
+Libraries: pandas (Data Manipulation), numpy (Cyclic Transforms), scikit-learn (Modeling & Tuning), matplotlib/seaborn (Visualization).
+
+Challenges Faced 
+
+Data Quality: Approximately 40% of the target values were missing (-999.0). Deciding whether to impute or drop was a critical tradeoff. I prioritized data quality over quantity.
+
+Design and Creative Decisions 
+
+Metric Selection: I chose RMSE (Root Mean Squared Error) over MAE. In energy grid management, large errors (predicting sun during a storm) are exponentially more costly than small variances. RMSE penalizes these large errors heavily.
+
+Visual Validation: I plotted the "Actual vs. Predicted" irradiance for the first 5 days of the test set. This visual confirmation proved the model successfully learned the diurnal (sunrise-sunset) cycle, providing confidence beyond just raw metrics.
 
 
-# PulpitMobility_Classification
+# Project 2: Car Showroom Classification
+Problem Understanding 
 
-1. Problem Understanding
-Classify sales transactions into their likely Payment Method (Cash, Credit, or Installment) based on transaction details like Price, Quantity, and Date. Real-World Context: For a car dealership, predicting how a customer will pay is crucial for financial planning. "Cash" deals provide immediate liquidity, while "Installments" require long-term accounts receivable management. A predictive model helps the finance team forecast their cash flow mix for the upcoming quarter.
+The goal was to classify sales transactions into their likely Payment Method (Cash, Credit, or Installment) based on features like Sale Price, Quantity, and Date.
 
-3. Data Preprocessing & Feature Engineering
-The raw sales data required specific transformations to extract behavioral signals:
-Temporal Features: I converted Sale_Date into Month and Is_Weekend.
-Reasoning: Consumer spending behavior often shifts on weekends or during specific seasons (e.g., tax return season), which might correlate with credit vs. cash usage.
-Noise Reduction: I dropped high-cardinality columns like Salesperson (9,000+ unique names) and Sale_ID.
-Reasoning: These identifiers are unique to specific transactions and do not generalize to new data. Keeping them would lead to severe overfitting (the model memorizing names instead of learning patterns).
-Target Encoding: I used LabelEncoder to transform the categorical targets (Cash, Credit, Installment) into numerical values (0, 1, 2) for the Random Forest classifier.
+Business Value: Predicting payment types helps dealerships forecast liquidity (Cash) versus accounts receivable (Installments), aiding in financial planning.
 
-4. Model Selection: Random Forest Classifier
-I selected a Random Forest Classifier over simpler models like Logistic Regression:
-Handling Non-Linearity: The relationship between Price and Payment Method is rarely linear. For example, very cheap cars might be Cash, mid-range might be Credit, and luxury cars might be Installment. A Linear Regression cannot easily capture these "thresholds," but a Decision-Tree-based ensemble like Random Forest excels at it.
-Class Balance: The dataset was balanced (~33% for each class), so I did not need to apply SMOTE or aggressive class weighting, allowing the Random Forest to train on the natural distribution of data.
+Approach and Methodology 
 
-5. Results & Critical Analysis (The "Why")
-Model Accuracy: 34.20%. Interpretation: In a balanced 3-class problem, a random guess yields ~33.3% accuracy. My model's performance (34%) indicates it is effectively performing at baseline.
-Why did this happen? (Critical Thinking) Instead of tuning hyperparameters endlessly, I analyzed the data to find the root cause:
-Feature Importance vs. Correlation: The Feature Importance plot (Figure 1) shows Sale_Price as the dominant feature. However, a post-hoc correlation analysis revealed the correlation coefficient between Sale_Price and Payment_Method is near 0.00.
-Conclusion: The provided dataset appears to be synthetic or randomized. There is no mathematical relationship between the Price of the car and the Payment Method in this specific file.
-Visual Proof: The Box Plot (Figure 2) confirms this. The price distributions for Cash, Credit, and Installment are identical. In a real-world scenario, we would expect "Installment" plans to skew towards higher price points.
+Preprocessing:
 
-6. Business Value & Alternative Insights
-Despite the lack of predictive signal for classification, I extracted value through EDA (Exploratory Data Analysis):
-Seasonality Analysis (Figure 3): I generated a seasonality graph to track sales volume by month. Even without a predictive classifier, this visualization provides actionable intelligence, allowing the dealership to identify peak sales months and optimize inventory ordering.
+Derived temporal features: Month and Is_Weekend to capture seasonal or weekly spending behaviors.
+
+Dropped high-cardinality noise: Removed Salesperson and Sale_ID to prevent the model from memorizing unique identifiers instead of learning patterns.
+
+Model Selection:
+
+Utilized a Random Forest Classifier to capture potential non-linear thresholds (e.g., high prices forcing installment plans) that linear models might miss.
+
+Evaluation & Analysis:
+
+Conducted a post-hoc Correlation Analysis and Feature Importance check to understand the drivers of the model's performance.
+
+Tools and Technologies Used 
+
+Language: Python 3.13
+
+Libraries: pandas, scikit-learn (Random Forest, LabelEncoder), seaborn (Heatmaps, Boxplots).
+
+Challenges Faced 
+
+Low Predictive Signal: The initial model achieved an accuracy of ~34%, which is equivalent to random guessing for a 3-class problem.
+
+Critical Resolution: Instead of aimlessly tuning the model, I investigated the data. I discovered that the correlation between Sale_Price and Payment_Method was near zero (-0.009). This proved the low accuracy was a data quality issue (synthetic/random data) rather than a modeling failure.
+
+Design and Creative Decisions 
+
+Pivot to Business Intelligence: Recognizing the model's limitations, I shifted focus from prediction to insight. I designed a Seasonality Graph to visualize sales volume trends by month.
+
+Justification: Even if the predictive model is not production-ready, this visualization provides actionable value to the client (inventory planning for peak months), demonstrating a solution-oriented mindset.
+
+Honest Reporting: I explicitly documented the low accuracy and provided statistical proof (Box Plots showing identical price distributions) to explain why it happened, rather than hiding the result. This reflects a commitment to analytical integrity.
+
+
+
